@@ -6,7 +6,7 @@ from google.oauth2 import service_account
 from os.path import splitext
 from pydub import AudioSegment
 
-SERVICE_ACCOUNT_FILE = 'taskmarvel-ad5507c76aa8.json'
+SERVICE_ACCOUNT_FILE = 'service-account.json'
 
 cred = service_account.Credentials.from_service_account_file(SERVICE_ACCOUNT_FILE)
 
@@ -14,7 +14,7 @@ cred = service_account.Credentials.from_service_account_file(SERVICE_ACCOUNT_FIL
 client = speech.SpeechClient(credentials=cred)
 
 # The name of the audio file to transcribe
-speech_file = "male.wav"
+speech_file = "clase-mx.wav"
 
 def wav2flac(wav_path):
     flac_path = "%s.flac" % splitext(wav_path)[0]
@@ -31,7 +31,7 @@ def transcribe_from_audio(speech_file: str):
     config = speech.RecognitionConfig(
         encoding=speech.RecognitionConfig.AudioEncoding.FLAC,
         sample_rate_hertz=48000,
-        language_code="es-SV",
+        language_code="es-MX",
         audio_channel_count=2,
         enable_separate_recognition_per_channel=True,
         use_enhanced=True,
@@ -39,6 +39,7 @@ def transcribe_from_audio(speech_file: str):
     )
 
     # Detects speech in the audio file
+    # response = client.long_running_recognize(config=config, audio=audio)
     response = client.recognize(config=config, audio=audio)
 
     for i, result in enumerate(response.results):
