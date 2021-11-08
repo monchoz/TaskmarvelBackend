@@ -12,13 +12,11 @@ from dotenv import load_dotenv
 load_dotenv()
 
 
+RECORDINGS = "recordings/"
 SERVICE_ACCOUNT_FILE = os.environ.get("GAC_FILE")
 cred = service_account.Credentials.from_service_account_file(SERVICE_ACCOUNT_FILE)
 # Instantiates a client
 client = speech.SpeechClient(credentials=cred)
-
-# The name of the audio file to transcribe
-speech_file = "male.wav"
 
 
 def wav2flac(wav_path):
@@ -28,32 +26,16 @@ def wav2flac(wav_path):
     return flac_path
 
 
-class FileUploadApi(Resource):
-    def post(self):
-        try:
-            uploaded_file = request.files['file']
-            if uploaded_file.filename != '':
-                uploaded_file.save("recordings/" + uploaded_file.filename)
-                return "File upload complete", 200
-        except:
-            return "File upload went wrong", 500
-
-
-class TranscribeApi(Resource):
-    def post(self):
-        body = request.get_json()
-        speech_file = body["fileName"]
-        speech_lang = body["lang"]
-
-        with io.open(wav2flac(speech_file), "rb") as audio_file:
-            content = audio_file.read()
+def transcribe_from_audio(file_name, lang):
+        with io.open(wav2flac(RECORDINGS + file_name), "rb") as audio_file:
+                content = audio_file.read()
 
         audio = speech.RecognitionAudio(content=content)
 
         config = speech.RecognitionConfig(
             encoding=speech.RecognitionConfig.AudioEncoding.FLAC,
             sample_rate_hertz=48000,
-            language_code=speech_lang,
+            language_code=lang,
             audio_channel_count=2,
             enable_separate_recognition_per_channel=True,
             use_enhanced=True,
@@ -74,4 +56,25 @@ class TranscribeApi(Resource):
             print(u"Channel Tag: {}".format(result.channel_tag))
             transcript_results = alternative.transcript
 
-        return transcript_results, 200
+        return transcript_results
+
+class FileUploadApi(Resource):
+    def post(self):
+        try:
+            uploaded_file = request.files['file']
+            if uploaded_file.filename != '':
+                file_path = RECORDINGS + uploaded_file.filename
+                uploaded_file.save(file_path)
+                return transcribe_from_audio(uploaded_file.filename, "en-US"), 200
+        except Exception as err:
+            print(err)
+            return "File upload went wrong", 500
+
+
+class TranscribeApi(Resource):
+    def post(self):
+        body = request.get_json()
+        speech_file = body["fileName"]
+        speech_lang = body["lang"]
+
+        return transcribe_from_audio(speech_file, speech_lang), 200
