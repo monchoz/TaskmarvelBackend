@@ -28,6 +28,17 @@ def wav2flac(wav_path):
     return flac_path
 
 
+class FileUploadApi(Resource):
+    def post(self):
+        try:
+            uploaded_file = request.files['file']
+            if uploaded_file.filename != '':
+                uploaded_file.save("recordings/" + uploaded_file.filename)
+                return "File upload complete", 200
+        except:
+            return "File upload went wrong", 500
+
+
 class TranscribeApi(Resource):
     def post(self):
         body = request.get_json()

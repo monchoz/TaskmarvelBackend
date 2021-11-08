@@ -1,5 +1,5 @@
 venv
-samples
+recordings
 
 .env
 service-account.json
