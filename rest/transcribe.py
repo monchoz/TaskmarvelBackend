@@ -2,7 +2,7 @@
 # Imports the Google Cloud client library
 import io
 import os
-from google.cloud import speech
+from google.cloud import speech, storage
 from google.oauth2 import service_account
 from os.path import splitext
 from pydub import AudioSegment
@@ -17,6 +17,7 @@ SERVICE_ACCOUNT_FILE = os.environ.get("GAC_FILE")
 cred = service_account.Credentials.from_service_account_file(SERVICE_ACCOUNT_FILE)
 # Instantiates a client
 client = speech.SpeechClient(credentials=cred)
+storage_client = storage.Client(credentials=cred)
 
 
 def wav2flac(wav_path):
@@ -58,14 +59,31 @@ def transcribe_from_audio(file_name, lang):
 
         return transcript_results
 
+
+# function to upload file to google cloud storage
+def upload_blob(bucket_name, source_file_name, destination_blob_name):
+    """Uploads a file to the bucket."""
+    bucket = storage_client.get_bucket(bucket_name)
+    blob = bucket.blob(destination_blob_name)
+
+    blob.upload_from_filename(source_file_name)
+
+    print('File {} uploaded to {}.'.format(
+        source_file_name,
+        destination_blob_name))
+
+
 class FileUploadApi(Resource):
     def post(self):
         try:
-            uploaded_file = request.files['file']
+            """ uploaded_file = request.files['file']
             if uploaded_file.filename != '':
                 file_path = RECORDINGS + uploaded_file.filename
-                uploaded_file.save(file_path)
-                return transcribe_from_audio(uploaded_file.filename, "en-US"), 200
+                 uploaded_file.save(file_path)"""
+            #upload_blob("tm-recordings", file_path, uploaded_file.filename)
+            upload_blob("tm-recordings", "recordings/Taskmarvel_recording_1636403191022.flac", "Taskmarvel_recording_1636403191022")
+                #return transcribe_from_audio(uploaded_file.filename, "en-US"), 200
+            return "done", 200
         except Exception as err:
             print(err)
             return "File upload went wrong", 500
