@@ -1,12 +1,12 @@
 
 # Imports the Google Cloud client library
-import io
 import os
+import proto
 from google.cloud import speech, storage
 from google.oauth2 import service_account
 from os.path import splitext
 from pydub import AudioSegment
-from flask import Response, request
+from flask import request
 from flask_restful import Resource
 from dotenv import load_dotenv
 load_dotenv()
@@ -28,10 +28,9 @@ def wav2flac(wav_path):
 
 
 def transcribe_from_audio(file_name, lang):
-        with io.open(wav2flac(RECORDINGS + file_name), "rb") as audio_file:
-                content = audio_file.read()
-
-        audio = speech.RecognitionAudio(content=content)
+        """Transcribe the given audio file."""
+        print("🤖 Transcribing from audio...")
+        audio = speech.RecognitionAudio(uri="gs://" + os.environ.get("GS_BUCKET") + "/" + file_name)
 
         config = speech.RecognitionConfig(
             encoding=speech.RecognitionConfig.AudioEncoding.FLAC,
@@ -46,19 +45,16 @@ def transcribe_from_audio(file_name, lang):
         # Detects speech in the audio file
         # response = client.long_running_recognize(config=config, audio=audio)
         response = client.recognize(config=config, audio=audio)
-
-        transcript_results = ""
-
+        
         for i, result in enumerate(response.results):
             alternative = result.alternatives[0]
             print("-" * 20)
-            print("First alternative of result {}".format(i))
-            print(u"Transcript: {}".format(alternative.transcript))
-            print(u"Channel Tag: {}".format(result.channel_tag))
-            transcript_results = alternative.transcript
+            print("⭐ First alternative of result {}".format(i))
+            print(u"⭐ Transcript: {}".format(alternative.transcript))
+            print(u"⭐ Channel Tag: {}".format(result.channel_tag))
 
-        return transcript_results
-
+        return proto.Message.to_dict(response)
+        
 
 # function to upload file to google cloud storage
 def upload_blob(bucket_name, source_file_name, destination_blob_name):
@@ -68,7 +64,7 @@ def upload_blob(bucket_name, source_file_name, destination_blob_name):
 
     blob.upload_from_filename(source_file_name)
 
-    print('File {} uploaded to {}.'.format(
+    print('🤖 File {} uploaded to {}.'.format(
         source_file_name,
         destination_blob_name))
 
@@ -76,17 +72,22 @@ def upload_blob(bucket_name, source_file_name, destination_blob_name):
 class FileUploadApi(Resource):
     def post(self):
         try:
-            """ uploaded_file = request.files['file']
+            uploaded_file = request.files['file']
             if uploaded_file.filename != '':
+                # save file to disk
                 file_path = RECORDINGS + uploaded_file.filename
-                 uploaded_file.save(file_path)"""
-            #upload_blob("tm-recordings", file_path, uploaded_file.filename)
-            upload_blob("tm-recordings", "recordings/Taskmarvel_recording_1636403191022.flac", "Taskmarvel_recording_1636403191022")
-                #return transcribe_from_audio(uploaded_file.filename, "en-US"), 200
-            return "done", 200
+                uploaded_file.save(file_path)
+                # convert to flac
+                flac_path = wav2flac(file_path)
+                file_name = os.path.basename(flac_path)
+            # upload local file to google cloud storage
+            print("🤖 Uploading file to google cloud storage...")
+            upload_blob("tm-recordings", flac_path, file_name)
+            # transcribe file
+            return transcribe_from_audio(file_name, "en-US"), 200
         except Exception as err:
             print(err)
-            return "File upload went wrong", 500
+            return "🛑 File upload went wrong", 500
 
 
 class TranscribeApi(Resource):
