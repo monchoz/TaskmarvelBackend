@@ -24,10 +24,11 @@ def wav2flac(wav_path):
     flac_path = "%s.flac" % splitext(wav_path)[0]
     song = AudioSegment.from_file(wav_path)
     song.export(flac_path, format = "flac")
-    return flac_path
+    duration = song.duration_seconds
+    return flac_path, duration
 
 
-def transcribe_from_audio(file_name, lang):
+def transcribe_from_audio(file_name, lang, long_recognize):
         """Transcribe the given audio file."""
         print("🤖 Transcribing from audio...")
         audio = speech.RecognitionAudio(uri="gs://" + os.environ.get("GS_BUCKET") + "/" + file_name)
@@ -43,8 +44,10 @@ def transcribe_from_audio(file_name, lang):
         )
 
         # Detects speech in the audio file
-        # response = client.long_running_recognize(config=config, audio=audio)
-        response = client.recognize(config=config, audio=audio)
+        operation = client.long_running_recognize(config=config, audio=audio) if long_recognize else client.recognize(config=config, audio=audio)
+        response = operation.result(timeout=90) if long_recognize else operation
+        
+        print(response)
         
         for i, result in enumerate(response.results):
             alternative = result.alternatives[0]
@@ -78,13 +81,13 @@ class FileUploadApi(Resource):
                 file_path = RECORDINGS + uploaded_file.filename
                 uploaded_file.save(file_path)
                 # convert to flac
-                flac_path = wav2flac(file_path)
+                flac_path, file_duration = wav2flac(file_path)
                 file_name = os.path.basename(flac_path)
             # upload local file to google cloud storage
             print("🤖 Uploading file to google cloud storage...")
             upload_blob("tm-recordings", flac_path, file_name)
             # transcribe file
-            return transcribe_from_audio(file_name, "en-US"), 200
+            return transcribe_from_audio(file_name, "en-US", file_duration > 60), 200
         except Exception as err:
             print(err)
             return "🛑 File upload went wrong", 500
@@ -95,5 +98,6 @@ class TranscribeApi(Resource):
         body = request.get_json()
         speech_file = body["fileName"]
         speech_lang = body["lang"]
+        long_recognize = body["longRecognize"]
 
-        return transcribe_from_audio(speech_file, speech_lang), 200
+        return transcribe_from_audio(speech_file, speech_lang, long_recognize), 200
