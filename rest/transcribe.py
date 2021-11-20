@@ -47,14 +47,13 @@ def transcribe_from_audio(file_name, lang, long_recognize):
         operation = client.long_running_recognize(config=config, audio=audio) if long_recognize else client.recognize(config=config, audio=audio)
         response = operation.result(timeout=90) if long_recognize else operation
         
-        print(response)
-        
         for i, result in enumerate(response.results):
             alternative = result.alternatives[0]
             print("-" * 20)
-            print("⭐ First alternative of result {}".format(i))
-            print(u"⭐ Transcript: {}".format(alternative.transcript))
-            print(u"⭐ Channel Tag: {}".format(result.channel_tag))
+            print("*** First alternative of result {} ***".format(i))
+            print(u"💬 Transcript: {}".format(alternative.transcript))
+            print(u"🚩 Channel Tag: {}".format(result.channel_tag))
+            print(u"🎯 Confidence: {}".format(alternative.confidence))
 
         return proto.Message.to_dict(response)
         
