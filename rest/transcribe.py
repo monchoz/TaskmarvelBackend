@@ -86,7 +86,7 @@ class FileUploadApi(Resource):
             print("🤖 Uploading file to google cloud storage...")
             upload_blob("tm-recordings", flac_path, file_name)
             # transcribe file
-            return transcribe_from_audio(file_name, "es-MX", file_duration > 60), 200
+            return transcribe_from_audio(file_name, "en-US", file_duration > 60), 200
         except Exception as err:
             print(err)
             return "🛑 File upload went wrong", 500
