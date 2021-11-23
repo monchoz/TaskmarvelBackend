@@ -45,7 +45,7 @@ def transcribe_from_audio(file_name, lang, long_recognize):
 
         # Detects speech in the audio file
         operation = client.long_running_recognize(config=config, audio=audio) if long_recognize else client.recognize(config=config, audio=audio)
-        response = operation.result(timeout=90) if long_recognize else operation
+        response = operation.result(timeout=180) if long_recognize else operation
         
         for i, result in enumerate(response.results):
             alternative = result.alternatives[0]
