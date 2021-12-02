@@ -40,7 +40,7 @@ def transcribe_from_audio(file_name, lang, long_recognize):
             audio_channel_count=2,
             enable_separate_recognition_per_channel=True,
             use_enhanced=True,
-            model="default"
+            model="video"
         )
 
         # Detects speech in the audio file
